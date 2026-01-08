@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Union
 
 from asgiref.sync import sync_to_async
 from django.contrib import messages
@@ -26,7 +26,7 @@ def show_credential(credential):
 
 def async_(
     func: Callable,
-) -> Callable[..., Any] | Callable[[Any, Any], Coroutine[Any, Any, Any]]:
+) -> Union[Callable[..., Any], Callable[[Any, Any], Coroutine[Any, Any, Any]]]:
     """Returns a coroutine function."""
     return func if asyncio.iscoroutinefunction(func) else sync_to_async(func)
 

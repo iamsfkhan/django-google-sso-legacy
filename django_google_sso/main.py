@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict, Tuple, Type
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -16,13 +15,28 @@ from django_google_sso import conf
 from django_google_sso.models import GoogleSSOUser
 
 
-@dataclass
+def _get_email_field_name(user_model):
+    """Get email field name with Django version compatibility.
+    
+    Django 1.11+ has get_email_field_name() method.
+    Django 1.8-1.10 may have EMAIL_FIELD attribute.
+    Falls back to 'email' if neither exists.
+    """
+    if hasattr(user_model, 'get_email_field_name'):
+        return user_model.get_email_field_name()
+    elif hasattr(user_model, 'EMAIL_FIELD'):
+        return user_model.EMAIL_FIELD
+    else:
+        return 'email'
+
+
 class GoogleAuth:
-    request: Any
-    _flow: Optional[Flow] = None
+    def __init__(self, request: Any, _flow: Optional[Flow] = None):
+        self.request = request
+        self._flow = _flow
 
     @property
-    def scopes(self) -> list[str]:
+    def scopes(self) -> List[str]:
         return self.get_sso_value("scopes")
 
     def get_sso_value(self, key: str) -> Any:
@@ -121,7 +135,7 @@ class GoogleAuth:
     def get_user_token(self):
         return self.flow.credentials.token
 
-    def check_enabled(self, next_url: str) -> tuple[bool, str]:
+    def check_enabled(self, next_url: str) -> Tuple[bool, str]:
         response = True, ""
         if not conf.GOOGLE_SSO_ENABLED:
             response = False, "Google SSO not enabled."
@@ -144,18 +158,18 @@ class GoogleAuth:
         return response
 
 
-@dataclass
 class UserHelper:
-    user_info: dict[Any, Any]
-    request: Any
-    user_changed: bool = False
+    def __init__(self, user_info: Dict[Any, Any], request: Any, user_changed: bool = False):
+        self.user_info = user_info
+        self.request = request
+        self.user_changed = user_changed
 
     @property
     def user_info_email(self):
         return self.user_info["email"].lower()
 
     @property
-    def user_model(self) -> type[User]:
+    def user_model(self) -> Type[User]:
         return get_user_model()
 
     @property
@@ -164,7 +178,7 @@ class UserHelper:
 
     @property
     def email_field_name(self) -> str:
-        return self.user_model.get_email_field_name()
+        return _get_email_field_name(self.user_model)
 
     @property
     def email_is_valid(self) -> bool:
@@ -178,7 +192,7 @@ class UserHelper:
             logger.debug(f"Email {self.user_info_email} is not verified.")
         return email_verified if email_verified is not None else False
 
-    def get_or_create_user(self, extra_users_args: dict | None = None):
+    def get_or_create_user(self, extra_users_args: Optional[Dict] = None):
         user_defaults = extra_users_args or {}
         if self.username_field.name not in user_defaults:
             user_defaults[self.username_field.name] = self.user_info_email

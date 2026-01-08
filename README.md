@@ -45,10 +45,10 @@ $ pip install django-google-sso
 ```
 
 > **Compatibility**
-> - Python 3.11, 3.12, 3.13
-> - Django 4.2, 5.0, 5.1, 5.2
+> - Python 3.6+
+> - Django 1.8+
 >
-> Older python/django versions are not supported.
+> Supports a wide range of Python and Django versions for legacy compatibility.
 
 ### Configuration
 

@@ -6,6 +6,21 @@ from django.utils.translation import gettext_lazy as _
 User = get_user_model()
 
 
+def _get_email_field_name(user_model):
+    """Get email field name with Django version compatibility.
+    
+    Django 1.11+ has get_email_field_name() method.
+    Django 1.8-1.10 may have EMAIL_FIELD attribute.
+    Falls back to 'email' if neither exists.
+    """
+    if hasattr(user_model, 'get_email_field_name'):
+        return user_model.get_email_field_name()
+    elif hasattr(user_model, 'EMAIL_FIELD'):
+        return user_model.EMAIL_FIELD
+    else:
+        return 'email'
+
+
 class GoogleSSOUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     google_id = models.CharField(max_length=255)
@@ -23,7 +38,8 @@ class GoogleSSOUser(models.Model):
         return None
 
     def __str__(self):
-        user_email = getattr(self.user, User.get_email_field_name())
+        email_field_name = _get_email_field_name(User)
+        user_email = getattr(self.user, email_field_name)
         return f"{user_email} ({self.google_id})"
 
     class Meta:
